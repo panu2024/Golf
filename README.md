@@ -21,7 +21,7 @@ npm.cmd install
 npm.cmd run dev
 ```
 
-Avaa selaimessa **http://localhost:5173**. Palvelin varaa portin 5173; jos portti on käytössä, pysäytä sitä käyttävä palvelin ja suorita käynnistyskomento uudelleen. Pysäytä Golfvahdin palvelin terminaalissa painamalla `Ctrl+C`.
+Avaa selaimessa **http://localhost:5173/Golf/**. Palvelin varaa portin 5173; jos portti on käytössä, pysäytä sitä käyttävä palvelin ja suorita käynnistyskomento uudelleen. Pysäytä Golfvahdin palvelin terminaalissa painamalla `Ctrl+C`.
 
 Windowsin `npm.cmd` toimii myös silloin, kun PowerShellin suorituskäytäntö estää `npm.ps1`-tiedoston käytön. Muissa ympäristöissä voit käyttää samoissa komennoissa `npm`-komentoa.
 
@@ -57,7 +57,43 @@ Voit kokeilla koottua sovellusta paikallisesti:
 npm.cmd run preview
 ```
 
-Avaa **http://localhost:4173**. Preview on paikallinen kooste-esikatselu; sovellus ei tarvitse palvelinpuolen tietokantaa tai rajapintaa.
+Avaa **http://localhost:4173/Golf/**. Preview on paikallinen kooste-esikatselu; sovellus ei tarvitse palvelinpuolen tietokantaa tai rajapintaa.
+
+## Julkaiseminen GitHub Pagesiin
+
+Julkaisu on valmisteltu repositoriolle [panu2024/Golf](https://github.com/panu2024/Golf). Viten `base` on `/Golf/`, joten JavaScript, CSS ja kuvakkeet latautuvat repositorion omasta polusta. Käytä isoa G-kirjainta myös osoitteessa. Sovelluksen kolme näkymää vaihtuvat Reactin tilassa ilman erillisiä URL-polkuja, joten sivun päivitys osoitteessa `/Golf/` toimii ilman palvelimen reititysasetuksia.
+
+### GitHubin asetukset
+
+1. Avaa repositorion **Settings → Pages**.
+2. Valitse **Build and deployment → Source → GitHub Actions**. Projektissa on valmis työnkulku; GitHubin tarjoamaa mallia ei tarvitse lisätä.
+3. Jos Actions on poistettu käytöstä, salli työnkulkujen suorittaminen kohdassa **Settings → Actions → General**. Työnkulku käyttää GitHubin omia `actions/*`-toimintoja.
+
+Ohje perustuu [GitHubin julkaisuasetusten dokumentaatioon](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site). Repositorion yksityisyysasetusta ei muuteta. Jos repo on yksityinen eikä Pages ole käytettävissä, tarkista tilauksen tuki: yksityisen repositorion Pages-julkaisu vaatii GitHub Pro-, Team- tai Enterprise-tilauksen. Julkisen repositorion Pages kuuluu myös Free-tilaukseen.
+
+### Muutosten tallentaminen ja lähettäminen
+
+Suorita PowerShellissä projektin juuressa:
+
+```powershell
+cd C:\Users\panuk\OneDrive\Golf
+git status
+git add vite.config.ts index.html .github/workflows/deploy-pages.yml README.md
+git commit -m "Valmistele Golfvahti GitHub Pagesiin"
+git push origin main
+```
+
+`git status` näyttää tallennettavat muutokset ennen commitia. `git add` lisää juuri julkaisua varten muutetut tiedostot. Lähetys `main`-haaraan käynnistää julkaisun automaattisesti.
+
+### Julkaisun seuraaminen ja käynnistäminen käsin
+
+Avaa repositorion **Actions** ja valitse **Deploy Golfvahti to GitHub Pages**. Näet työnkulun etenemisen ja mahdolliset virheet sen lokista. Käsin käynnistäminen onnistuu samasta näkymästä valitsemalla **Run workflow → Branch: main → Run workflow**, kun työnkulku on ensin lähetetty GitHubiin.
+
+Työnkulku asentaa riippuvuudet komennolla `npm ci`, joka käyttää `package-lock.json`-tiedostoon lukittuja versioita. Se suorittaa logiikkatestit ja `npm run build` -komennon, jonka alkuun kuuluu tyyppitarkistus. Onnistuneen koonnin jälkeen työnkulku lataa `dist`-kansion julkaisua varten ja julkaisee sen GitHub Pagesiin. `dist`-kansiota ei tarvitse tallentaa Gitiin eikä erillistä `gh-pages`-haaraa luoda.
+
+Onnistuneen julkaisun jälkeen sivun oletusosoite on **https://panu2024.github.io/Golf/**. Avaa osoite vasta, kun Actions näyttää julkaisun onnistuneen. GitHubissa tapahtuva julkaisu ja sen lopullinen osoite varmistetaan ensimmäisellä työnkulun suorituksella; paikallinen build ei yksin vahvista palvelussa tehtyä julkaisua.
+
+Pagesissa sovellus toimii edelleen paikallisena demona: vahdit ja demon muutokset tallentuvat käyttäjän selaimeen. Paikallisen kehitysosoitteen tallennukset eivät siirry GitHub Pagesin osoitteeseen. Ilmoitukset toimivat vain avoimessa sovelluksessa.
 
 ## Rakenne
 
@@ -67,5 +103,7 @@ Avaa **http://localhost:4173**. Preview on paikallinen kooste-esikatselu; sovell
 - `src/styles.css`: sovelluksen ulkoasu ja mukautuminen puhelimelle sekä tietokoneelle.
 - `tests/domain.test.ts`: sovelluslogiikan testit Node.js:n omalla testityökalulla.
 - `package.json`: riippuvuudet ja käynnistys-, tarkistus- sekä koontikomennot.
+- `vite.config.ts`: kehityspalvelimen asetukset ja GitHub Pagesin `/Golf/`-polku.
+- `.github/workflows/deploy-pages.yml`: automaattinen koonti ja julkaisu GitHub Pagesiin.
 
 Tekniikat: React, TypeScript, Vite ja tavallinen CSS.
