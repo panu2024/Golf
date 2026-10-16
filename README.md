@@ -27,10 +27,10 @@ Windowsin `npm.cmd` toimii myös silloin, kun PowerShellin suorituskäytäntö e
 
 ## Demon kokeileminen
 
-1. Avaa **Lähtöaikojen haku**. Valitse alue tai golfkenttä, pelipäivä, aikaväli, pelaajamäärä ja enimmäishinta. Hae lähtöajat. Hakutuloksissa näkyvät kenttä, päivä, kellonaika, hinta per pelaaja ja vapaat paikat.
-2. Paina **Tallenna vahdiksi**, anna vahdille nimi ja paina **Tallenna vahti**. **Omat vahdit** näyttää tallennetut ehdot ja niitä vastaavat lähtöajat. Voit muokata ja poistaa vahteja kortin kuvakepainikkeilla.
-3. Kokeile ilmoitusta seuraavan päivän vahdilla: kaikki alueet, aikaväli 08.00–20.00, neljä pelaajaa ja enimmäishinta 150 euroa. Paina **Hae lähtöaikoja** ja tallenna vahti.
-4. Avaa **Kentän demo**. Valitse **Simuloi peruutus** -osiosta seuraavan päivän kello 18.30 lähtö, joka on esimerkkitiedoissa aluksi täynnä. Valitse neljä vapautettavaa paikkaa ja paina **Vapauta lähtöpaikkoja**. Vahti saa uuden osuman. Avaa näkyvä ilmoitusbanneri tai yläpalkin kellokuvake nähdäksesi ilmoituksen.
+1. Avaa yläreunan **Haku**. Valitse alue tai golfkenttä, pelipäivä ja pelaajamäärä. Avaa tarvittaessa **Lisäehdot**, jos haluat muuttaa aikaväliä tai enimmäishintaa. Käytössä oleva aikaväli ja hintaraja näkyvät myös lisäehtojen ollessa suljettuna. Paina **Hae lähtöaikoja**. Hakutuloksissa näkyvät kenttä, päivä, kellonaika, hinta per pelaaja ja vapaat paikat.
+2. Paina hakutulosten yhteydessä **Tallenna vahti**, anna vahdille nimi ja vahvista lomakkeen **Tallenna vahti** -painikkeella. **Omat vahdit** näyttää tallennetut ehdot ja niitä vastaavat lähtöajat. Voit muokata ja poistaa vahteja kortin kuvakepainikkeilla.
+3. Kokeile ilmoitusta seuraavan päivän vahdilla: kaikki alueet, neljä pelaajaa sekä **Lisäehdot**-kohdasta aikaväli 08.00–20.00 ja enimmäishinta 150 euroa. Paina **Hae lähtöaikoja** ja tallenna vahti hakutulosten yhteydestä.
+4. Avaa **Valikko → Kentän demo**. Valitse **Simuloi peruutus** -osiosta seuraavan päivän kello 18.30 lähtö, joka on esimerkkitiedoissa aluksi täynnä. Valitse neljä vapautettavaa paikkaa ja paina **Vapauta lähtöpaikkoja**. Vahti saa uuden osuman. Avaa näkyvä ilmoitusbanneri tai yläpalkin kellokuvake nähdäksesi ilmoituksen.
 5. Lisää Kentän demon lomakkeella samalle seuraavalle päivälle uusi lähtöaika, esimerkiksi kello 14.30, neljä vapaata paikkaa ja hinta 45 euroa. Paina **Lisää lähtöaika**. Se ilmestyy heti hakutuloksiin ja vahdin osumiin. Päivitä sivu: vahdit, lisätyt ajat ja vapautetut paikat säilyvät.
 
 Hakutulokset päivittyvät demon muutosten jälkeen. Ilmoitus syntyy, kun lähtö alkaa täyttää olemassa olevan vahdin ehtoja; saman jo sopivan lähdön paikkamäärän kasvu ei tuota uutta ilmoitusta.
@@ -98,7 +98,7 @@ Pagesissa sovellus toimii edelleen paikallisena demona: vahdit ja demon muutokse
 ## Rakenne
 
 - `src/App.tsx`: näkymät, sovelluksen tila ja käyttäjän toiminnot.
-- `src/components/`: uudelleenkäytettävä hakulomake, lähtöaikakortti ja kuvakkeet.
+- `src/components/`: uudelleenkäytettävä hakulomake lisäehtoineen, lähtöaikarivi ja kuvakkeet.
 - `src/lib/golf.ts`: kentät, päivämäärät, lähtöaikojen haku, ilmoitukset ja tallennus.
 - `src/styles.css`: sovelluksen ulkoasu ja mukautuminen puhelimelle sekä tietokoneelle.
 - `tests/domain.test.ts`: sovelluslogiikan testit Node.js:n omalla testityökalulla.

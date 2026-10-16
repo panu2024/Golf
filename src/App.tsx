@@ -8,7 +8,14 @@ import { TeeCard } from './components/TeeCard';
 
 type View = 'search' | 'watches' | 'demo';
 type WatchEditor = { id?: string; name: string; criteria: Criteria };
-const titles: Record<View, string> = { search: 'Lähtöaikojen haku', watches: 'Omat vahdit', demo: 'Kentän demo' };
+const viewHashes: Record<View, string> = { search: '#haku', watches: '#omat-vahdit', demo: '#kentan-demo' };
+
+// Hash-linkit toimivat myös GitHub Pagesin /Golf/-alihakemistossa.
+function viewFromHash(): View {
+  if (window.location.hash === viewHashes.watches) return 'watches';
+  if (window.location.hash === viewHashes.demo) return 'demo';
+  return 'search';
+}
 
 function initialState() {
   try { return loadState(window.localStorage); }
@@ -61,7 +68,8 @@ export default function App() {
   const [now, setNow] = useState(() => new Date());
   const today = getHelsinkiDate(now);
   const previousDay = useRef(today);
-  const [view, setView] = useState<View>('search');
+  const [view, setView] = useState<View>(viewFromHash);
+  const menuRef = useRef<HTMLDetailsElement>(null);
   const [criteria, setCriteria] = useState<Criteria>(() => defaultCriteria(today));
   const [query, setQuery] = useState(criteria);
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -99,18 +107,52 @@ export default function App() {
     try { setStorageError(!saveState(window.localStorage, state)); }
     catch { setStorageError(true); }
   }, [state]);
+  useEffect(() => {
+    const syncView = () => {
+      setView(viewFromHash());
+      setNotificationsOpen(false);
+      if (menuRef.current) menuRef.current.open = false;
+    };
+    const closeMenu = (event: PointerEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) menuRef.current.open = false;
+    };
+    const closeWithEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setNotificationsOpen(false);
+      if (menuRef.current?.open) {
+        menuRef.current.open = false;
+        menuRef.current.querySelector('summary')?.focus();
+      }
+    };
+    window.addEventListener('hashchange', syncView);
+    document.addEventListener('pointerdown', closeMenu);
+    document.addEventListener('keydown', closeWithEscape);
+    return () => {
+      window.removeEventListener('hashchange', syncView);
+      document.removeEventListener('pointerdown', closeMenu);
+      document.removeEventListener('keydown', closeWithEscape);
+    };
+  }, []);
 
-  const changeView = (next: View) => { setView(next); setNotificationsOpen(false); };
+  const changeView = (next: View) => {
+    setView(next);
+    setNotificationsOpen(false);
+    if (menuRef.current) menuRef.current.open = false;
+    window.location.hash = viewHashes[next];
+    window.scrollTo(0, 0);
+  };
   const search = () => {
     const error = criteriaError(criteria);
     setSearchError(error);
     if (!error) { setQuery({ ...criteria }); setNow(new Date()); }
   };
   const openEditor = (watch?: Watch) => {
-    const error = watch ? null : criteriaError(criteria);
+    // Tulosten vieressä oleva tallennus käyttää viimeksi haettuja ehtoja.
+    const savedCriteria = watch?.criteria ?? query;
+    const error = watch ? null : criteriaError(savedCriteria);
     setSearchError(error);
     if (error) return;
-    setEditor(watch ? { id: watch.id, name: watch.name, criteria: { ...watch.criteria } } : { name: `${locationName(criteria.location)} · ${criteria.date.split('-').reverse().slice(0, 2).join('.')}`, criteria: { ...criteria } });
+    setEditor(watch ? { id: watch.id, name: watch.name, criteria: { ...savedCriteria } } : { name: `${locationName(savedCriteria.location)} · ${savedCriteria.date.split('-').reverse().slice(0, 2).join('.')}`, criteria: { ...savedCriteria } });
     setEditorError(null);
   };
   const saveWatch = () => {
@@ -166,15 +208,23 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
-        <button className="brand" onClick={() => changeView('search')} aria-label="Golfvahti, siirry lähtöaikojen hakuun"><span className="brand-mark"><Icon name="flag" size={29} /></span><span className="brand-wordmark">golfvahti<span>OMA HETKESI VIHERIÖLLÄ</span></span></button>
-        <nav className="nav-list" aria-label="Päänavigaatio">
-          {(['search', 'watches', 'demo'] as View[]).map((item) => <button key={item} className={`nav-button ${view === item ? 'is-active' : ''}`} aria-current={view === item ? 'page' : undefined} onClick={() => changeView(item)}><span className="nav-icon"><Icon name={item === 'search' ? 'search' : item === 'watches' ? 'bell' : 'course'} /></span>{titles[item]}{item === 'watches' && <span className="nav-count">{state.watches.length}</span>}</button>)}
-        </nav>
-        <div className="sidebar-bottom"><Icon name="course" size={34} /><p>Vähemmän etsimistä.<br /><strong>Enemmän pelaamista.</strong></p><div className="sidebar-note"><span>PAIKALLINEN DEMO</span><p>Kuvitteelliset kentät.<br />Oikeasti toimivat vahdit.</p></div></div>
-      </aside>
+      <header className="site-header">
+        <div className="header-inner">
+          <button className="brand" onClick={() => changeView('search')} aria-label="Golfvahti, siirry hakuun"><Icon name="flag" size={25} /><span>Golfvahti</span></button>
+          <nav className="main-nav" aria-label="Päänavigaatio">
+            <a className={`nav-link ${view === 'search' ? 'is-active' : ''}`} href={viewHashes.search} aria-current={view === 'search' ? 'page' : undefined} onClick={() => changeView('search')}>Haku</a>
+            <a className={`nav-link ${view === 'watches' ? 'is-active' : ''}`} href={viewHashes.watches} aria-current={view === 'watches' ? 'page' : undefined} onClick={() => changeView('watches')}>Omat vahdit <span className="nav-count">{state.watches.length}</span></a>
+          </nav>
+          <div className="header-actions">
+            <button className="notification-toggle" aria-label={`Ilmoitukset, ${unread} lukematonta`} aria-expanded={notificationsOpen} aria-controls="notifications" onClick={() => { if (menuRef.current) menuRef.current.open = false; setNotificationsOpen(!notificationsOpen); }}><Icon name="bell" />{unread > 0 && <span className="notification-dot">{unread}</span>}</button>
+            <details className="more-menu" ref={menuRef} onToggle={(event) => { if (event.currentTarget.open) setNotificationsOpen(false); }}>
+              <summary>Valikko</summary>
+              <div className="menu-panel"><button onClick={() => changeView('demo')} aria-current={view === 'demo' ? 'page' : undefined}><Icon name="course" />Kentän demo</button></div>
+            </details>
+          </div>
+        </div>
+      </header>
       <div className="workspace">
-        <header className="topbar"><span className="breadcrumb">Golfvahti <span>/</span> {titles[view]}</span><div className="topbar-actions"><span className="demo-badge"><span />Paikallinen demo</span><button className="notification-toggle" aria-label={`Ilmoitukset, ${unread} lukematonta`} aria-expanded={notificationsOpen} aria-controls="notifications" onClick={() => setNotificationsOpen(!notificationsOpen)}><Icon name="bell" />{unread > 0 && <span className="notification-dot">{unread}</span>}</button></div></header>
         {notificationsOpen && <section id="notifications" className="notification-panel" aria-label="Ilmoitukset"><div className="notification-header"><h2>Ilmoitukset</h2><button className="button button-ghost button-small" onClick={readNotices} disabled={unread === 0}>Merkitse luetuiksi</button></div>{state.notifications.length === 0 ? <p className="muted">Ei vielä ilmoituksia. Tallenna vahti ja kokeile peruutusta kentän demossa.</p> : state.notifications.map((notice) => <article className={`notification-item ${!notice.read ? 'is-unread' : ''}`} key={notice.id}><strong>Uusi sopiva lähtö vapautui</strong><p>{notice.courseName} · {formatDate(notice.date)} klo {notice.time} · {formatPrice(notice.price)} / pelaaja</p><small>Vahti: {notice.watchName}</small><button className="button button-ghost button-small" onClick={() => { setState((current) => ({ ...current, notifications: current.notifications.map((item) => item.id === notice.id ? { ...item, read: true } : item) })); changeView('watches'); }}>Näytä vahdit <Icon name="arrow" size={16} /></button></article>)}</section>}
         <main className="content" id="main-content">
           {storageError && <div className="status-banner is-error" role="alert">Selaimeen tallentaminen epäonnistui. Muutokset toimivat nyt, mutta eivät välttämättä säily sivua päivitettäessä.</div>}
@@ -182,14 +232,19 @@ export default function App() {
           {unread > 0 && !notificationsOpen && <button className="status-banner notification-banner" onClick={() => setNotificationsOpen(true)}><Icon name="bell" /><span>{unread} {unread === 1 ? 'uusi sopiva lähtö vapautui' : 'uutta sopivaa lähtöä vapautui'}. Avaa ilmoitukset.</span><Icon name="arrow" /></button>}
 
           {view === 'search' && <>
-            <section className="hero"><div className="hero-copy"><p className="eyebrow">HYVÄ KIERROS ALKAA TÄSTÄ</p><h1 className="page-title">Löydä oma hetkesi<br />viheriöllä.</h1><p className="page-description">Kerro milloin haluat pelata. Me näytämme sopivat lähdöt ja vahdimme vapautuvia paikkoja.</p><div className="hero-stats"><div className="hero-stat"><strong>4</strong><span>demokenttää</span></div><div className="hero-stat"><strong>7</strong><span>päivää lähtöaikoja</span></div><div className="hero-stat"><strong>Sinulle</strong><span>sopivat pelipaikat</span></div></div></div><div className="hero-visual" aria-hidden="true"><div className="golf-landscape"><div className="landscape-hill" /><div className="landscape-path" /><div className="landscape-flag" /></div></div></section>
-            <div className="demo-callout"><Icon name="course" /><p><strong>Kokeile Golfvahtia.</strong> Tämä on paikallinen demo kuvitteellisilla kentillä. Ilmoitukset toimivat sovelluksen ollessa avoinna.</p></div>
-            <section className="panel search-panel" aria-labelledby="search-title"><div className="panel-header"><div><h2 id="search-title" className="section-title">Milloin lähdetään pelaamaan?</h2><p className="section-description">Valitse itsellesi sopiva pelipäivä ja hakuehdot.</p></div><span className="info-pill"><Icon name="clock" size={15} />Suomen aika</span></div><SearchForm value={criteria} onChange={(next) => { setCriteria(next); setSearchError(null); }} onSubmit={search} onSaveWatch={() => openEditor()} error={searchError} /><p className="help-text">Voit tallentaa vahdin myös silloin, kun sopivia lähtöjä ei vielä löydy.</p></section>
-            <section aria-labelledby="results-title"><div className="results-heading"><div><h2 id="results-title" className="section-title">Sinulle sopivat lähtöajat <span className="results-count">{matches.length}</span></h2><p className="filter-summary">{locationName(query.location)} · {formatDate(query.date)} · {query.earliest}–{query.latest} · {query.players} pelaajaa · enintään {formatPrice(query.maxPrice)} / pelaaja</p></div><span className="muted">Päivittyy demon muutoksista</span></div>{matches.length ? <div className="results-grid">{matches.map((slot) => <TeeCard key={slot.id} slot={slot} />)}</div> : <EmptyState title="Näillä ehdoilla ei löytynyt vapaita lähtöjä">Kokeile laajempaa aikaväliä, toista päivää tai suurempaa hintarajaa. Tallenna vahti, niin ilmoitamme uusista sopivista lähdöistä.</EmptyState>}</section>
+            <div className="page-heading"><h1 id="search-title" className="page-title">Hae lähtöaika</h1><p className="demo-note">Demo kuvitteellisilla golfkentillä. Kaikki ajat ovat Suomen aikaa.</p></div>
+            <section className="panel search-panel" aria-labelledby="search-title"><SearchForm value={criteria} onChange={(next) => { setCriteria(next); setSearchError(null); }} onSubmit={search} error={searchError} /></section>
+            <section aria-labelledby="results-title">
+              <div className="results-heading">
+                <div><h2 id="results-title" className="section-title">Lähtöajat <span className="results-count">{matches.length}</span></h2><p className="filter-summary">{locationName(query.location)} · {formatDate(query.date)} · {query.players} {query.players === 1 ? 'pelaaja' : 'pelaajaa'} · {query.earliest}–{query.latest} · enintään {formatPrice(query.maxPrice)} / pelaaja</p></div>
+                <button className="button button-secondary button-small" onClick={() => openEditor()}><Icon name="bell" size={18} />Tallenna vahti</button>
+              </div>
+              {matches.length ? <div className="results-list"><div className="results-list-header" aria-hidden="true"><span>Lähtöaika</span><span>Golfkenttä</span><span>Hinta / pelaaja</span><span>Vapaat paikat</span></div>{matches.map((slot) => <TeeCard key={slot.id} slot={slot} />)}</div> : <EmptyState title="Näillä ehdoilla ei löytynyt vapaita lähtöjä">Kokeile toista päivää tai muuta lisäehtoja. Voit tallentaa vahdin myös ilman hakutuloksia.</EmptyState>}
+            </section>
           </>}
 
           {view === 'watches' && <>
-            <div className="page-heading"><p className="eyebrow">ANNA VAHDIN ETSIÄ</p><h1 className="page-title">Omat vahdit</h1><p className="page-description">Sinun pelitoiveesi, yhdessä paikassa. Vahti ilmoittaa, kun demossa vapautuu uusi hakuehtoihisi sopiva lähtö.</p></div>
+            <div className="page-heading"><h1 className="page-title">Omat vahdit</h1><p className="page-description">Tallennetut hakuehdot ja niihin sopivat lähtöajat.</p></div>
             <div className="demo-callout"><Icon name="bell" /><p>Vahdit säilyvät tässä selaimessa. <strong>Ilmoituksia syntyy vain avoimen demon muutoksista.</strong> Kokeile vapauttaa lähtöpaikkoja Kentän demo -näkymässä.</p></div>
             {state.watches.length === 0 ? <EmptyState title="Ensimmäinen vahtisi odottaa">Tee lähtöaikojen haku ja tallenna sinulle sopivat hakuehdot vahdiksi.<br />Sopivan lähtöajan ei tarvitse löytyä heti.<br /><br /><button className="button button-primary" onClick={() => changeView('search')}><Icon name="plus" />Luo ensimmäinen vahti</button></EmptyState> : <div className="watch-grid">{state.watches.map((watch) => {
               const watchMatches = findMatches(slots, watch.criteria, now);
@@ -199,13 +254,13 @@ export default function App() {
           </>}
 
           {view === 'demo' && <>
-            <div className="page-heading"><p className="eyebrow">KOKEILE MITEN VAHTI TOIMII</p><h1 className="page-title">Kentän demo</h1><p className="page-description">Avaa uusi lähtö tai simuloi peruutus. Muutokset näkyvät heti haussa ja sopivissa vahdeissa.</p></div>
-            <div className="demo-callout"><Icon name="course" /><p><strong>Sinä ohjaat demoa.</strong> Tallenna ensin vahti. Vapauta sitten paikkoja sen pelipäivälle ja aikavälille hintarajan sisällä.</p></div>
+            <div className="page-heading"><h1 className="page-title">Kentän demo</h1><p className="page-description">Lisää lähtö tai vapauta paikkoja peruutuksella. Haku ja vahdit päivittyvät heti.</p></div>
+            <div className="demo-callout"><Icon name="course" /><p>Tallenna ensin vahti haussa. Vapauta sitten sen ehtoihin sopivia lähtöpaikkoja ja tarkista ilmoitukset kellokuvakkeesta.</p></div>
             <div className="demo-grid"><section className="panel" aria-labelledby="add-title"><div className="panel-header"><div><h2 id="add-title" className="section-title">Lisää vapaa lähtöaika</h2><p className="section-description">Luo uusi lähtö yhdelle demokentistä.</p></div><Icon name="plus" /></div><form onSubmit={addSlot}><div className="form-grid"><div className="form-field field-full"><label htmlFor="demo-course">Golfkenttä</label><select id="demo-course" value={demoSlot.courseId} onChange={(e) => setDemoSlot({ ...demoSlot, courseId: e.target.value })}>{COURSES.map((course) => <option key={course.id} value={course.id}>{course.name}</option>)}</select></div><div className="form-field"><label htmlFor="demo-date">Pelipäivä</label><input id="demo-date" type="date" required min={today} value={demoSlot.date} onChange={(e) => setDemoSlot({ ...demoSlot, date: e.target.value })} /></div><div className="form-field"><label htmlFor="demo-time">Lähtöaika (Suomen aika)</label><input id="demo-time" type="time" required value={demoSlot.time} onChange={(e) => setDemoSlot({ ...demoSlot, time: e.target.value })} /></div><div className="form-field"><label htmlFor="demo-price">Hinta / pelaaja (€)</label><input id="demo-price" type="number" min="0" max="10000" step="0.01" required value={demoSlot.price} onChange={(e) => setDemoSlot({ ...demoSlot, price: Number(e.target.value) })} /></div><div className="form-field"><label htmlFor="demo-seats">Vapaat paikat</label><select id="demo-seats" value={demoSlot.available} onChange={(e) => setDemoSlot({ ...demoSlot, available: Number(e.target.value) })}>{[1, 2, 3, 4].map((n) => <option key={n} value={n}>{n} {n === 1 ? 'paikka' : 'paikkaa'}</option>)}</select></div></div>{demoError && <p className="field-error" role="alert">{demoError}</p>}<div className="form-actions"><button className="button button-primary" type="submit"><Icon name="plus" />Lisää lähtöaika</button></div></form></section>
             <section className="panel" aria-labelledby="cancel-title"><div className="panel-header"><div><h2 id="cancel-title" className="section-title">Simuloi peruutus</h2><p className="section-description">Vapauta varattuja paikkoja olemassa olevaan lähtöön.</p></div><Icon name="bell" /></div><div className="form-field"><label htmlFor="cancel-slot">Lähtö, johon vapautetaan paikkoja</label><select id="cancel-slot" value={selectedCancellation?.id ?? ''} onChange={(e) => setCancelId(e.target.value)} disabled={candidates.length === 0}>{candidates.map((slot) => <option key={slot.id} value={slot.id}>{COURSES.find((course) => course.id === slot.courseId)!.name} · {slot.date.split('-').reverse().join('.')} klo {slot.time} · {slot.available}/4 vapaana</option>)}</select></div>{selectedCancellation ? <><div className="demo-slot"><strong>{COURSES.find((course) => course.id === selectedCancellation.courseId)!.name}</strong><p>{formatDate(selectedCancellation.date)} klo {selectedCancellation.time}</p><p>{formatPrice(selectedCancellation.price)} / pelaaja · <strong>{selectedCancellation.available}/4 paikkaa vapaana</strong></p></div><div className="form-field"><label htmlFor="release-seats">Vapautettavat paikat</label><select id="release-seats" value={effectiveRelease} onChange={(e) => setReleaseSeats(Number(e.target.value))}>{Array.from({ length: 4 - selectedCancellation.available }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n} {n === 1 ? 'paikka' : 'paikkaa'}</option>)}</select></div><div className="form-actions"><button className="button button-primary" onClick={cancel}><Icon name="check" />Vapauta lähtöpaikkoja</button></div><p className="help-text">Ilmoitus syntyy, kun vapaita paikkoja on ensimmäistä kertaa tarpeeksi vahtisi koko ryhmälle.</p></> : <p className="muted">Kaikki tulevat lähdöt ovat täysin vapaita. Lisää uusi lähtö tai odota seuraavaa demopäivää.</p>}</section></div>
             {state.addedSlots.length > 0 && <section className="panel added-slots"><h2 className="section-title">Itse lisäämäsi lähtöajat</h2><div className="demo-slot-list">{slots.filter((slot) => state.addedSlots.some((added) => added.id === slot.id)).map((slot) => <TeeCard key={slot.id} slot={slot} compact />)}</div></section>}
           </>}
-          <footer className="footer-note"><span><Icon name="flag" size={16} />Golfvahti · paikallinen prototyyppi</span><span>Kaikki ajat: Suomi (Europe/Helsinki)</span><p>Oikeat kenttäintegraatiot, taustavalvonta, sähköpostit, maksut ja kirjautuminen kuuluvat myöhempään vaiheeseen.</p></footer>
+          <footer className="footer-note"><span>Paikallinen demo · Suomen aika (Europe/Helsinki)</span><p>Ilmoitukset toimivat avoimessa sovelluksessa. Oikeat varaukset, kenttäintegraatiot, taustavalvonta, sähköpostit, maksut ja kirjautuminen kuuluvat myöhempään vaiheeseen.</p></footer>
         </main>
       </div>
       {editor && <Modal title={editor.id ? 'Muokkaa vahtia' : 'Tallenna oma vahti'} onClose={() => setEditor(null)}><SearchForm idPrefix="watch" value={editor.criteria} onChange={(next) => { setEditor({ ...editor, criteria: next }); setEditorError(null); }} onSubmit={saveWatch} submitLabel={editor.id ? 'Tallenna muutokset' : 'Tallenna vahti'} error={editorError} extraFields={<div className="form-field field-full"><label htmlFor="watch-name">Vahdin nimi</label><input id="watch-name" required maxLength={100} value={editor.name} onChange={(e) => setEditor({ ...editor, name: e.target.value })} /></div>} /><p className="help-text">Vahti tallennetaan tämän selaimen localStorageen. Ilmoitukset toimivat avoimessa demossa.</p></Modal>}
