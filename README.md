@@ -61,12 +61,12 @@ Avaa **http://localhost:4173/Golf/**. Preview on paikallinen kooste-esikatselu; 
 
 ## Julkaiseminen GitHub Pagesiin
 
-Julkaisu on valmisteltu repositoriolle [panu2024/Golf](https://github.com/panu2024/Golf). Viten `base` on `/Golf/`, joten JavaScript, CSS ja kuvakkeet latautuvat repositorion omasta polusta. Käytä isoa G-kirjainta myös osoitteessa. Sovelluksen kolme näkymää vaihtuvat Reactin tilassa ilman erillisiä URL-polkuja, joten sivun päivitys osoitteessa `/Golf/` toimii ilman palvelimen reititysasetuksia.
+Julkaisu on valmisteltu repositoriolle [panu2024/Golf](https://github.com/panu2024/Golf). Viten `base` on `/Golf/`, joten JavaScript, CSS ja kuvakkeet latautuvat repositorion omasta polusta. Käytä isoa G-kirjainta myös osoitteessa. Näkymät käyttävät hash-linkkejä (`#haku`, `#omat-vahdit` ja `#kentan-demo`), joten sivun päivittäminen ja suorat näkymälinkit toimivat `/Golf/`-osoitteen alla ilman palvelimen reititysasetuksia.
 
 ### GitHubin asetukset
 
 1. Avaa repositorion **Settings → Pages**.
-2. Valitse **Build and deployment → Source → GitHub Actions**. Projektissa on valmis työnkulku; GitHubin tarjoamaa mallia ei tarvitse lisätä.
+2. Valitse **Build and deployment → Source → GitHub Actions**. Projektissa on valmis työnkulku **Deploy Golfvahti to GitHub Pages** (`.github/workflows/deploy-pages.yml`); käytä sitä ainoana Pages-julkaisuna. Älä lisää GitHubin Jekyll-mallia: Golfvahti tarvitsee Vite-koonnin, ja erillinen Jekyll-julkaisu voisi korvata toimivan sivun lähdetiedostoilla.
 3. Jos Actions on poistettu käytöstä, salli työnkulkujen suorittaminen kohdassa **Settings → Actions → General**. Työnkulku käyttää GitHubin omia `actions/*`-toimintoja.
 
 Ohje perustuu [GitHubin julkaisuasetusten dokumentaatioon](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site). Repositorion yksityisyysasetusta ei muuteta. Jos repo on yksityinen eikä Pages ole käytettävissä, tarkista tilauksen tuki: yksityisen repositorion Pages-julkaisu vaatii GitHub Pro-, Team- tai Enterprise-tilauksen. Julkisen repositorion Pages kuuluu myös Free-tilaukseen.
